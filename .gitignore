@@ -1,0 +1,8 @@
+# Secrets
+.gigamove_cookies.txt
+.env
+.env.*
+
+# Large raw archives and dumps (download locally via scripts/)
+*.zip
+legacy_flickr.json
