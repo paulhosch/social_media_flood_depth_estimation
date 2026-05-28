@@ -157,6 +157,17 @@ For this project context, these approaches are currently not feasible as routine
 - high engineering and maintenance overhead,
 - and area-specific calibration that does not transfer cleanly across flood events.
 
+### 5.4 Alternative Geolocation Options Documented in Project Notes
+
+Based on `docs/image_geolocation_overview.md`, alternatives can be grouped by expected accuracy and operational burden:
+
+- **Open-world geolocation models** (e.g., planet-scale classification and LVLM reasoning): useful for broad localization priors, but typical errors remain in the kilometer range for arbitrary scenes.
+- **Commercial OSINT-style geolocation tools**: can provide city/neighborhood hints quickly, but do not provide the meter-level certainty required for 1 m flood-cell validation.
+- **Cross-view or satellite-ground approaches**: can improve localization where suitable reference imagery is available, but still require substantial setup and context-specific tuning.
+- **Reference-map visual localization stacks** (hloc/SfM family): potentially precise enough, but only after building and maintaining area-specific reference databases.
+
+Within this project framing, methods such as Nomad-like open-world geolocation remain too coarse, while hloc-class pipelines are technically strong but operationally out of scope.
+
 **Figure 5 — Maturity and feasibility of geolocation approaches for this project.**
 
 ```mermaid
@@ -235,6 +246,47 @@ flowchart TB
 ### 7.2 Flood-Depth Proxy Interpretation
 
 The flood-depth component uses visual vehicle submergence levels as an ordinal proxy (0–4). It supports comparative interpretation and triage, but it is not a direct hydraulic measurement. The output should therefore be used as constrained evidence, not standalone truth.
+
+### 7.3 Employed Models: Training Data, Output, and Operational Role
+
+The current implementation uses two enrichment models documented in `docs/EXIF_IMAGES_DATASET.md`.
+
+#### A) Flood scene classifier (Flood-Image-Detection, Hugging Face)
+
+- **Model family and task:** SigLIP-based image classification for flooded vs non-flooded scene discrimination.
+- **Input/output in this repository:** each image is assigned `flood_class` with paired scores (`flood_score_flooded`, `flood_score_non_flooded`).
+- **Training data context (as documented):** the model is consumed as a pretrained external model from Hugging Face; project docs treat it as an exploratory classifier and do not claim local retraining in this repository.
+- **Operational role:** early semantic filtering and prioritization of candidate flood observations before depth-proxy interpretation.
+- **Limitation:** class scores indicate visual flood likelihood, not metric water depth.
+
+#### B) Vehicle submergence model (FLOOD-DEPTH-ML, YOLO weights)
+
+- **Model family and task:** YOLO-based detection/classification using released FLOOD-DEPTH-ML weights (`best_car.pt`), producing inundation level classes for detected vehicles.
+- **Input/output in this repository:** outputs include per-image max level (`flood_depth_max_level`), vehicle count, high-danger indicator, and structured detection JSON with bounding boxes and confidence.
+- **Training data context (as documented):** model weights are downloaded from the FLOOD-DEPTH-ML project and used directly for inference; this repository does not retrain the model. The source project frames levels as vehicle submergence classes rather than surveyed stage observations.
+- **Operational role:** convert flood imagery into an ordinal hazard proxy that can support qualitative model-checking at mapped points.
+- **Limitation:** results remain proxy-based and scene-dependent; they are not equivalent to gauge-calibrated hydraulic depth measurements.
+
+#### C) Combined interpretation in this project
+
+The two models are intentionally chained:
+
+1. classify flood scene likelihood,
+2. estimate vehicle submergence proxy where relevant,
+3. retain metadata-first quality control as the primary acceptance criterion.
+
+This ordering reflects the project principle that metadata reliability (location/time provenance) dominates model sophistication for operational 1 m validation.
+
+### 7.4 Alternative Flood-Depth Model Options from the Documentation
+
+`docs/flood_depth_estimation_summary.md` identifies several alternatives that were reviewed:
+
+- **EcoVision line (2019/2020, ETH Zürich):** foundational and scientifically strong, but documented as research-grade in practice (partial code, no turnkey deployment path, limited accessibility of data/assets).
+- **STURM-FloodDepth (2025):** more pipeline-oriented and includes trained components plus curated data; technically attractive for structured workflows but introduces additional integration complexity versus the current lightweight enrichment path.
+- **FloodLlama (2025 preprint):** reports strong performance, but no public code/weights/data release in the documented state, making reproducible operational deployment infeasible.
+- **FloodVision (2025):** promising VLM + knowledge-graph concept, but no released implementation and external API dependencies, limiting reproducibility and controlled offline operations.
+
+Given these constraints, the repository currently prioritizes FLOOD-DEPTH-ML as the most practical deployment-ready option while maintaining explicit uncertainty framing.
 
 ---
 

@@ -10,7 +10,7 @@ Portable, geotagged image subset derived from the GIA GigaMove archive `social_m
 
 ## Summary statistics
 
-Counts below reflect the dataset built on **2026-05-27** (see `data/exif_images/manifest.json`). Re-run `scripts/generate_exif_dataset_doc_figures.py` after rebuilding to refresh plots.
+Counts below reflect the dataset built on **2026-05-27** (see `data/exif_images/manifest.json`).
 
 | Metric | Count |
 |--------|------:|
@@ -247,12 +247,7 @@ Example skip counts from the reference build:
 
 ## Dataset overview figures
 
-Regenerate after any rebuild:
-
-```bash
-.venv/bin/pip install matplotlib seaborn contextily geopandas pandas
-.venv/bin/python scripts/generate_exif_dataset_doc_figures.py
-```
+The following embedded figures summarize dataset composition, spatial coverage, and temporal distribution.
 
 ![Figure 6 — Dataset funnel: counts from source zip through geotagged subset to flooded images with vehicles](exif_images/figures/fig04_dataset_funnel.png)
 
@@ -264,13 +259,13 @@ Regenerate after any rebuild:
 
 ![Figure 8 — Daily image counts by flood class](exif_images/figures/fig06_daily_timeline.png)
 
-**Figure 8.** Stacked bars per calendar day (UTC) from EXIF capture time (`exif_taken_at_original`, else `exif_taken_at_record`), stacked by `flood_class`.
+**Figure 8.** Scatter points per calendar day (UTC) from EXIF capture time (`exif_taken_at_original`, else `exif_taken_at_record`), coloured by `flood_class`.
 
 ---
 
 ## Example images
 
-Nine sample thumbnails per panel (3×3 grid), chosen by evenly spacing rows sorted by model score (flooded / non-flooded) or max inundation level (depth panels). Regenerate with `scripts/generate_exif_dataset_doc_figures.py`.
+Nine sample thumbnails per panel (3×3 grid), chosen by evenly spacing rows sorted by model score (flooded / non-flooded) or max inundation level (depth panels).
 
 **Bounding-box style (Figures 11–13):** Matches the EXIF map side panel (`web/exif-map/src/components/ImageWithDetections.tsx`): coloured rectangle per vehicle, label `Level {n}: {confidence}` with level-coloured background and white text. Colours from `inundationLevelHex` — L0 `#22c55e`, L1–L2 `#eab308`, L3–L4 `#ef4444` ([`floodDepth.ts`](../web/exif-map/src/lib/floodDepth.ts)). Drawing logic lives in `exif_images/detection_overlay.py`.
 

@@ -424,25 +424,25 @@ def figure_timeline(df: pd.DataFrame, out_path: Path) -> None:
     days = [datetime.combine(d, datetime.min.time()) for d in daily.index]
 
     fig, ax = plt.subplots(figsize=(12, 5))
-    width = 0.85
-    ax.bar(
+    ax.scatter(
         days,
         daily[FLOOD_CLASS_NON_FLOODED],
-        width=width,
         label="Non-flooded",
         color=COLOR_NON_FLOODED,
-        edgecolor="white",
-        linewidth=0.3,
+        s=28,
+        alpha=0.85,
+        edgecolors="white",
+        linewidths=0.35,
     )
-    ax.bar(
+    ax.scatter(
         days,
         daily[FLOOD_CLASS_FLOODED],
-        width=width,
-        bottom=daily[FLOOD_CLASS_NON_FLOODED],
         label="Flooded",
         color=COLOR_FLOODED,
-        edgecolor="white",
-        linewidth=0.3,
+        s=28,
+        alpha=0.85,
+        edgecolors="white",
+        linewidths=0.35,
     )
 
     ax.set_xlabel("Date (EXIF capture time, UTC)")
