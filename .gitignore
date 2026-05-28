@@ -1,8 +1,25 @@
+.venv/
+__pycache__/
+*.pyc
+
 # Secrets
 .gigamove_cookies.txt
 .env
 .env.*
+!web/exif-map/.env.example
 
 # Large raw archives and dumps (download locally via scripts/)
 *.zip
 legacy_flickr.json
+
+# Built catalogue (regenerate with scripts/build_catalogue.sh)
+data/canonical/*.json
+!data/canonical/.gitkeep
+
+# Built exif_images dataset (regenerate with scripts/build_exif_images.py)
+data/exif_images/*
+!data/exif_images/.gitkeep
+
+# ML model weights (fetch with scripts/fetch_flood_depth_model.py)
+data/models/*
+!data/models/.gitkeep
