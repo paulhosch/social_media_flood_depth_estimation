@@ -291,6 +291,46 @@ body,
   font-size: 0.9rem;
 }
 
+.side-panel__location-nav {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.55rem 0.85rem;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.side-panel__location-index {
+  margin: 0;
+  text-align: center;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.side-panel__location-nav-button {
+  width: 1.95rem;
+  height: 1.95rem;
+  border-radius: 999px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #0f172a;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.side-panel__location-nav-button:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.side-panel__location-nav-button:not(:disabled):hover {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
 .side-panel__image-wrap {
   flex: 0 0 auto;
   max-height: 45vh;

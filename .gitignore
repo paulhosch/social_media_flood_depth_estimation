@@ -1,6 +1,10 @@
 .venv/
+.cursor/
 __pycache__/
 *.pyc
+pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 # Secrets
 .gigamove_cookies.txt
@@ -11,6 +15,8 @@ __pycache__/
 # Large raw archives and dumps (download locally via scripts/)
 *.zip
 legacy_flickr.json
+data/raw/posts_only/*
+!data/raw/posts_only/.gitkeep
 
 # Built catalogue (regenerate with scripts/build_catalogue.sh)
 data/canonical/*.json

@@ -8,14 +8,16 @@ These files use a **nested GIA export model** (objects `location` and `media`). 
 
 ## Inventory
 
-| Path | GigaMove ID | Size (approx.) | Description |
-|------|-------------|----------------|-------------|
-| `posts_only.zip` | `db666e8f10cbb95fee7ee363084fabf0` | 1.9 MB | Archive of the three `posts_only/*.json` files |
-| `posts_only/posts_2023-2024.json` | (inside zip above) | 2.9 MB | Posts ~2023–2024, no images |
-| `posts_only/posts_2024-2025.json` | (inside zip above) | 9.9 MB | Posts ~2024–2025, no images |
-| `posts_only/posts_2026.json` | (inside zip above) | 674 KB | Posts 2026, no images |
-| `legacy_flickr.json` | `dffd3f56179b565b78fad787c6c7e9e4` | 2.6 GB | Flickr subset with OSM-derived `location.geom` |
-| `social_media_2023-2024.zip` | `e5b00930def8870289fc98057b3f3434` | 53 GB | Image files + embedded `workspace/posts.json` |
+Raw JSON and archives are **not** committed to git (except this documentation). Download locally with `scripts/download_gigamove.sh` or extract from GigaMove archives.
+
+| Path | Size (approx.) | Description |
+|------|----------------|-------------|
+| `posts_only.zip` | 1.9 MB | Archive of the three `posts_only/*.json` files |
+| `posts_only/posts_2023-2024.json` | 2.9 MB | Posts ~2023–2024, no images |
+| `posts_only/posts_2024-2025.json` | 9.9 MB | Posts ~2024–2025, no images |
+| `posts_only/posts_2026.json` | 674 KB | Posts 2026, no images |
+| `legacy_flickr.json` | 2.6 GB | Flickr subset with OSM-derived `location.geom` |
+| `social_media_2023-2024.zip` | 53 GB | Image files + embedded `workspace/posts.json` |
 
 Re-download: `scripts/download_gigamove.sh`
 
@@ -314,7 +316,7 @@ Portable subset built from `social_media_2023-2024.zip` (streamed; no full unzip
 | Output | Description |
 |--------|-------------|
 | `images/*.jpg` | Re-encoded images (max 2048 px longest edge); `file_name` in Parquet is basename only |
-| `index.parquet` | 8 columns after build; 11 after flood classification; 17 after flood depth (adds `flood_depth_max_level`, `flood_depth_vehicle_count`, `flood_depth_high_danger`, `flood_depth_detections`) |
+| `index.parquet` | 8 columns after build; 11 after flood classification; 15 after flood depth (adds `flood_depth_max_level`, `flood_depth_vehicle_count`, `flood_depth_high_danger`, `flood_depth_detections`) |
 | `manifest.json` | Build counts, `images_subdir`, processing parameters; `flood_classification` and `flood_depth` blocks after enrichment |
 | `data/models/best_car.pt` | YOLO weights for flood depth (fetch with `scripts/fetch_flood_depth_model.py`; not committed) |
 
@@ -382,7 +384,7 @@ For upload or comparison with `GET /hw_posts`, map nested fields roughly as foll
 
 ## Data quality notes
 
-1. **Deduplicate** before curation: `posts_2024-2025.json` and `legacy_flickr.json` contain many repeated `post_id`s.
+1. **Deduplicate** before curation: `posts_2024-2025.json` and `legacy_flickr.json` contain many repeated `post_id`s. The EXIF build (`scripts/build_exif_images.py`) deduplicates within each `(platform, post_id)` by `media.url` and raw-byte SHA256 — see [EXIF_IMAGES_DATASET.md](EXIF_IMAGES_DATASET.md#manifestjson).
 2. **`posts_2023-2024.json`** is missing identifiers and media; keep separate until updated by GIA.
 3. **Polygons** exist only in `legacy_flickr.json` (`location.geom`); other JSON files have no polygons as of this download.
 4. **Images** in the large zip are not guaranteed 1:1 with post metadata (per GIA email); prefer `media.url` for verification.

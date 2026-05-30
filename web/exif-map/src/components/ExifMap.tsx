@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { DeckGL } from "@deck.gl/react";
-import { ScatterplotLayer } from "@deck.gl/layers";
+import { ScatterplotLayer, TextLayer } from "@deck.gl/layers";
 import { FlyToInterpolator, WebMercatorViewport, type MapViewState } from "@deck.gl/core";
 import Map, { type MapRef } from "react-map-gl/maplibre";
 import type { Map as MaplibreMap } from "maplibre-gl";
@@ -24,6 +24,16 @@ interface ExifMapProps {
 type ColoredPoint = MapPoint & {
   color: [number, number, number, number];
 };
+
+interface LocationCountLabel {
+  lon: number;
+  lat: number;
+  count: number;
+}
+
+function locationKey(point: { lon: number; lat: number }): string {
+  return `${point.lon.toFixed(5)},${point.lat.toFixed(5)}`;
+}
 
 function initialViewState(points: MapPoint[]) {
   if (points.length === 0) {
@@ -133,6 +143,20 @@ export default function ExifMap({ index, colorMode, onSelect }: ExifMapProps) {
     [index.points, index.time_range, colorMode],
   );
 
+  const locationCountLabels = useMemo(() => {
+    const labels = new globalThis.Map<string, LocationCountLabel>();
+    for (const point of coloredPoints) {
+      const key = locationKey(point);
+      if (labels.has(key)) continue;
+      labels.set(key, {
+        lon: point.lon,
+        lat: point.lat,
+        count: Math.max(1, point.stack_count),
+      });
+    }
+    return Array.from(labels.values());
+  }, [coloredPoints]);
+
   const layers = useMemo(
     () => [
       new ScatterplotLayer<ColoredPoint>({
@@ -149,8 +173,25 @@ export default function ExifMap({ index, colorMode, onSelect }: ExifMapProps) {
           if (info.object) handlePointClick(info.object);
         },
       }),
+      new TextLayer<LocationCountLabel>({
+        id: "exif-location-counts",
+        data: locationCountLabels,
+        getPosition: (d) => [d.lon, d.lat],
+        getText: (d) => String(d.count),
+        getSize: 12,
+        sizeUnits: "pixels",
+        getColor: [255, 255, 255, 255],
+        getTextAnchor: "middle",
+        getAlignmentBaseline: "center",
+        getPixelOffset: [0, -15],
+        background: true,
+        getBackgroundColor: [15, 23, 42, 196],
+        backgroundPadding: [5, 3],
+        fontWeight: 700,
+        pickable: false,
+      }),
     ],
-    [coloredPoints, handlePointClick],
+    [coloredPoints, handlePointClick, locationCountLabels],
   );
 
   const handleViewStateChange = useCallback(
