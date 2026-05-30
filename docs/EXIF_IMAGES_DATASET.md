@@ -10,22 +10,26 @@ Portable, geotagged image subset derived from the GIA GigaMove archive `social_m
 
 ## Summary statistics
 
-Counts below reflect the dataset built on **2026-05-27** (see `data/exif_images/manifest.json`).
+Counts below reflect the dataset after dedup on **2026-05-30** (see `data/exif_images/manifest.json`).
 
 | Metric | Count |
 |--------|------:|
 | Images in source zip | 14,928 |
-| Included (EXIF GPS + datetime) | 1,218 |
-| Classified as flooded | 803 |
-| Classified as non-flooded | 415 |
-| Flooded with ≥1 vehicle detected | 74 |
-| Any included image with vehicle detected | 123 |
+| Included (EXIF GPS + datetime, after dedup) | 663 |
+| Skipped as within-post duplicate (URL or content) | 555 |
+| Classified as flooded | 492 |
+| Classified as non-flooded | 171 |
+| Flooded with ≥1 vehicle detected | 49 |
+| Any included image with vehicle detected | 87 |
+| High danger (any Level 3 or 4 vehicle) | 2 |
+
+Legacy builds without dedup had **1,218** included images; rebuild with `--overwrite` or run `scripts/dedup_exif_images.py` on an existing dataset.
 
 ---
 
 ## Build pipeline
 
-Run steps in order from the repository root (Python 3.11+ recommended):
+Run steps in order from the repository root (**Python 3.13** recommended):
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
@@ -51,7 +55,7 @@ flowchart TB
   FETCH --> WEIGHTS["data/models/best_car.pt"]
 
   WEIGHTS --> FD["scripts/enrich_flood_depth.py<br/>FLOOD-DEPTH-ML YOLO"]
-  FD --> FULL["index.parquet · 17 columns<br/>manifest flood_depth block"]
+  FD --> FULL["index.parquet · 15 columns<br/>manifest flood_depth block"]
 
   FULL --> VAL["scripts/validate_exif_images.py"]
   VAL --> OK["OK / FAILED report"]
@@ -59,10 +63,12 @@ flowchart TB
   subgraph recovery["Recovery"]
     REBUILD["scripts/rebuild_index_parquet.py"]
     REBUILD --> BASE
+    DEDUP["scripts/dedup_exif_images.py<br/>in-place URL/content dedup"]
+    DEDUP --> BASE
   end
 ```
 
-**Figure 2 — Inclusion decision at build time.** Only JPEGs that pass EXIF checks are written to `data/exif_images/`; all others are counted in `manifest.json` skip statistics.
+**Figure 2 — Inclusion decision at build time.** Only JPEGs that pass EXIF checks and are not within-post duplicates are written to `data/exif_images/`; all others are counted in `manifest.json` skip statistics.
 
 ```mermaid
 flowchart TD
@@ -72,9 +78,14 @@ flowchart TD
   READ -->|GPS stub only| SKIP_G["skipped_gps_stub"]
   READ -->|no GPS or no datetime| SKIP_D["skipped_no_gps_or_datetime"]
   READ -->|valid Point + datetime| META["Join posts.json by media.file_name"]
-  META --> REENC["prepare_output_jpeg()<br/>max 2048 px, quality 85"]
+  META --> DEDUP{"URL or SHA256<br/>already included<br/>for this post?"}
+  DEDUP -->|duplicate URL| SKIP_U["skipped_duplicate_url"]
+  DEDUP -->|duplicate content| SKIP_H["skipped_duplicate_content"]
+  DEDUP -->|unique| REENC["prepare_output_jpeg()<br/>max 2048 px, quality 85"]
   REENC --> OUT["images/{file_name}<br/>row in index.parquet"]
 ```
+
+Dedup is always on, scoped to `(platform, post_id)`. Keys are tracked only after EXIF qualification so a later zip copy with the same URL can still be included if earlier copies failed the EXIF filter. Bluesky carousel posts (different `media.url` per image) are preserved; Flickr scrape duplicates (same URL, different UUID `file_name`) are dropped.
 
 ---
 
@@ -97,6 +108,7 @@ social_media_data_catalogue/
 ├── exif_images/                            # importable library
 │   ├── exif.py                             # GPS/datetime parse, column names
 │   ├── metadata.py                         # posts.json join
+│   ├── dedup.py                            # within-post URL + content dedup
 │   ├── resize.py                           # re-encode pipeline
 │   ├── flood_classification.py           # SigLIP classifier
 │   ├── flood_depth.py                      # YOLO vehicle levels
@@ -104,6 +116,7 @@ social_media_data_catalogue/
 │   └── paths.py
 ├── scripts/
 │   ├── build_exif_images.py
+│   ├── dedup_exif_images.py
 │   ├── enrich_flood_classification.py
 │   ├── fetch_flood_depth_model.py
 │   ├── enrich_flood_depth.py
@@ -133,7 +146,7 @@ social_media_data_catalogue/
 ```text
 data/exif_images/
 ├── manifest.json       # provenance, filters, build/enrichment stats
-├── index.parquet       # tabular index (8 / 11 / 17 columns by stage)
+├── index.parquet       # tabular index (8 / 11 / 15 columns by stage)
 └── images/
     └── <file_name>.jpg # re-encoded JPEGs; basename matches index.file_name
 ```
@@ -208,16 +221,19 @@ Machine-readable provenance written/updated by each script:
 
 | Block | When present | Contents |
 |-------|----------------|----------|
-| (root) | After build | `included_count`, skip counters, `image_processing`, `filter`, `index_columns` |
+| (root) | After build | `included_count`, skip counters, `image_processing`, `filter`, `dedup`, `index_columns` |
+| `dedup` | After build | `scope`, `methods`, `skipped_duplicate_url`, `skipped_duplicate_content` |
 | `flood_classification` | After classification | `model_id`, `enriched_at`, `device`, `batch_size`, `row_count` |
 | `flood_depth` | After depth | `model_path`, `model_source`, `conf_threshold`, `images_with_vehicles`, `images_high_danger` |
 
-Example skip counts from the reference build:
+Example skip counts from the reference build (with dedup):
 
 | Counter | Value | Meaning |
 |---------|------:|---------|
 | `zip_jpg_total` | 14,928 | JPEG members under `workspace/` |
-| `included_count` | 1,218 | Written to dataset |
+| `included_count` | 663 | Written to dataset after dedup |
+| `skipped_duplicate_url` | 555 | Same `media.url` already included for this post |
+| `skipped_duplicate_content` | ~0 | Same raw-byte SHA256 already included (URL differed) |
 | `skipped_no_gps_or_datetime` | 13,133 | No usable GPS point and/or datetime |
 | `skipped_gps_stub` | 304 | GPS IFD present but not a parseable point |
 | `skipped_corrupt` | 273 | Unreadable JPEG |
@@ -305,6 +321,7 @@ Nine sample thumbnails per panel (3×3 grid), chosen by evenly spacing rows sort
 
 - Parquet column set matches `manifest.json` enrichment stage
 - Bijection between `images/*.jpg` and `index.parquet` rows
+- No duplicate on-disk JPEG content within the same `(platform, post_id)`
 - GeoJSON points, datetime fields, max edge ≤ `max_dimension_px`
 - Re-read EXIF from disk JPEGs matches stored geometry and timestamps
 - Flood scores in range; `flood_class` consistent with score argmax
@@ -316,8 +333,9 @@ Smoke-test a subset: `validate_exif_images.py --sample 50`.
 
 ## Operational notes
 
-- **Disk:** Building writes ~1.2k re-encoded JPEGs plus Parquet; classification downloads Hugging Face weights on first run. Set `HF_HOME` to a volume with free space if needed.
-- **Overwrite:** `build_exif_images.py --overwrite` replaces an existing dataset directory.
+- **Disk:** Building writes ~660 re-encoded JPEGs plus Parquet; classification downloads Hugging Face weights on first run. Set `HF_HOME` to a volume with free space if needed.
+- **Overwrite:** `build_exif_images.py --overwrite` replaces an existing dataset directory. Re-run enrichment scripts afterward (`enrich_flood_classification.py`, `enrich_flood_depth.py`, `export_map_index.py`).
+- **Dedup:** Always applied at build time; no opt-out flag. Rebuild existing datasets with `--overwrite` to drop legacy within-post duplicates. Without the source zip, run `scripts/dedup_exif_images.py` on an existing `data/exif_images/` directory (preserves enrichment columns on canonical rows).
 - **Missing Parquet:** If `images/` is intact but `index.parquet` is missing, run `rebuild_index_parquet.py`, then re-run enrichment scripts.
 - **Not ground truth:** ML labels support exploration and QA; confirm critical cases manually before operational use.
 
