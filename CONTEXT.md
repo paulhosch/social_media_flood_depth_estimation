@@ -50,4 +50,4 @@ _Avoid_: “delete” or “ignore permanently”—quarantine means set aside, 
 ./scripts/build_catalogue.sh
 ```
 
-Outputs: `data/canonical/catalogue.json`, `posts_api.json`, `manifest.json`. See [docs/adr/0001-canonical-hwc-flat-post.md](docs/adr/0001-canonical-hwc-flat-post.md).
+Outputs: `data/canonical/catalogue.json`, `posts_api.json`, `manifest.json`. Field rules and dedupe behaviour are defined in [docs/HWC_REST_API.md](docs/HWC_REST_API.md) and `catalogue/`.

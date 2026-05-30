@@ -4,8 +4,10 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
+from collections import defaultdict
 from pathlib import Path
 
 import pyarrow.parquet as pq
@@ -64,6 +66,42 @@ def _datetimes_match(stored, parsed) -> bool:
     return stored_norm == parsed
 
 
+def _check_no_within_post_duplicate_content(
+    *,
+    out_dir: Path,
+    images_subdir: str,
+    platforms: list[str],
+    post_ids: list[str],
+    file_names: list[str],
+) -> list[str]:
+    """Fail when a post includes multiple on-disk JPEGs with identical content."""
+    errors: list[str] = []
+    by_post: dict[tuple[str, str], list[str]] = defaultdict(list)
+    for platform, post_id, file_name in zip(platforms, post_ids, file_names, strict=True):
+        if not post_id:
+            continue
+        by_post[(platform, post_id)].append(file_name)
+
+    for (platform, post_id), names in by_post.items():
+        if len(names) < 2:
+            continue
+        hashes: dict[str, list[str]] = defaultdict(list)
+        for file_name in names:
+            jpg_path = image_path(out_dir, file_name, subdir=images_subdir)
+            if not jpg_path.is_file():
+                continue
+            digest = hashlib.sha256(jpg_path.read_bytes()).hexdigest()
+            hashes[digest].append(file_name)
+
+        for digest, dup_names in hashes.items():
+            if len(dup_names) > 1:
+                errors.append(
+                    f"{platform}/{post_id}: duplicate content hash {digest[:12]} "
+                    f"for {len(dup_names)} images"
+                )
+    return errors
+
+
 def validate(
     *,
     out_dir: Path,
@@ -112,6 +150,16 @@ def validate(
             errors.append(f"jpgs without parquet rows: {len(only_jpg)}")
         if only_parquet:
             errors.append(f"parquet rows without jpgs: {len(only_parquet)}")
+
+    errors.extend(
+        _check_no_within_post_duplicate_content(
+            out_dir=out_dir,
+            images_subdir=images_subdir,
+            platforms=table.column("platform").to_pylist(),
+            post_ids=table.column("post_id").to_pylist(),
+            file_names=file_names,
+        )
+    )
 
     row_count = table.num_rows
     expected_count = manifest.get("included_count")

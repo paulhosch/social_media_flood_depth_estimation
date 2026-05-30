@@ -18,8 +18,9 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from exif_images.dedup import PostImageDeduper
 from exif_images.exif import INDEX_COLUMNS, classify_jpeg_bytes, read_exif_from_bytes
-from exif_images.metadata import load_posts_by_filename, post_text_fields
+from exif_images.metadata import load_posts_by_filename, media_url, post_text_fields
 from exif_images.paths import IMAGES_SUBDIR, image_path, images_dir
 from exif_images.resize import prepare_output_jpeg
 
@@ -85,12 +86,15 @@ def build(
     images_dir(out_dir).mkdir(parents=True, exist_ok=True)
 
     rows: list[dict] = []
+    deduper = PostImageDeduper()
     stats = {
         "zip_jpg_total": 0,
         "included_count": 0,
         "skipped_gps_stub": 0,
         "skipped_no_gps_or_datetime": 0,
         "skipped_corrupt": 0,
+        "skipped_duplicate_url": 0,
+        "skipped_duplicate_content": 0,
         "unmatched_post_metadata": 0,
     }
 
@@ -125,6 +129,16 @@ def build(
             if post is None:
                 stats["unmatched_post_metadata"] += 1
             post_fields = post_text_fields(post)
+
+            skip_reason = deduper.is_duplicate(
+                post_fields["platform"],
+                post_fields["post_id"] or file_name,
+                media_url(post),
+                data,
+            )
+            if skip_reason is not None:
+                stats[f"skipped_duplicate_{skip_reason}"] += 1
+                continue
 
             output_bytes = prepare_output_jpeg(
                 data,
@@ -175,6 +189,12 @@ def build(
             "max_dimension_px": max_dimension,
             "jpeg_quality": jpeg_quality,
             "always_reencode": True,
+        },
+        "dedup": {
+            "scope": "within (platform, post_id)",
+            "methods": ["media.url", "sha256_raw_bytes"],
+            "skipped_duplicate_url": stats["skipped_duplicate_url"],
+            "skipped_duplicate_content": stats["skipped_duplicate_content"],
         },
         "index_columns": list(INDEX_COLUMNS),
         "posts_json_rows": len(posts_by_name),

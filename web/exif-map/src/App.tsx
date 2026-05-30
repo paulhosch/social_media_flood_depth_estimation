@@ -18,8 +18,13 @@ import type {
   FloodClassificationFilter,
   FloodDepthFilter,
   MapIndex,
+  MapPoint,
 } from "./lib/types";
 import { mapIndexUrl } from "./lib/config";
+
+function locationKey(point: Pick<MapPoint, "lon" | "lat">): string {
+  return `${point.lon.toFixed(5)},${point.lat.toFixed(5)}`;
+}
 
 export default function App() {
   const [index, setIndex] = useState<MapIndex | null>(null);
@@ -98,6 +103,38 @@ export default function App() {
     );
   }, [index, selectedFileName]);
 
+  const pointsAtSelectedLocation = useMemo(() => {
+    if (!index || !selectedPoint) return [] as MapPoint[];
+    const key = locationKey(selectedPoint);
+    return index.points.filter((point) => locationKey(point) === key);
+  }, [index, selectedPoint]);
+
+  const selectedLocationIndex = useMemo(() => {
+    if (!selectedFileName) return -1;
+    return pointsAtSelectedLocation.findIndex(
+      (point) => point.file_name === selectedFileName,
+    );
+  }, [pointsAtSelectedLocation, selectedFileName]);
+
+  const selectedLocationTotal = pointsAtSelectedLocation.length;
+
+  const handlePrevAtLocation = useCallback(() => {
+    if (selectedLocationIndex <= 0) return;
+    const previous = pointsAtSelectedLocation[selectedLocationIndex - 1];
+    if (previous) setSelectedFileName(previous.file_name);
+  }, [pointsAtSelectedLocation, selectedLocationIndex]);
+
+  const handleNextAtLocation = useCallback(() => {
+    if (
+      selectedLocationIndex < 0 ||
+      selectedLocationIndex >= pointsAtSelectedLocation.length - 1
+    ) {
+      return;
+    }
+    const next = pointsAtSelectedLocation[selectedLocationIndex + 1];
+    if (next) setSelectedFileName(next.file_name);
+  }, [pointsAtSelectedLocation, selectedLocationIndex]);
+
   const handleSelect = useCallback((fileName: string) => {
     setSelectedFileName(fileName);
   }, []);
@@ -154,6 +191,10 @@ export default function App() {
         point={selectedPoint}
         hasFloodDepth={hasFloodDepth}
         width={panelWidth}
+        locationIndex={selectedLocationIndex}
+        locationTotal={selectedLocationTotal}
+        onPrevLocationImage={handlePrevAtLocation}
+        onNextLocationImage={handleNextAtLocation}
       />
     </div>
   );

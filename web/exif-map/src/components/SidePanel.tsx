@@ -19,12 +19,20 @@ interface SidePanelProps {
   point: MapPoint | null;
   hasFloodDepth: boolean;
   width: number;
+  locationIndex: number;
+  locationTotal: number;
+  onPrevLocationImage: () => void;
+  onNextLocationImage: () => void;
 }
 
 export default function SidePanel({
   point,
   hasFloodDepth,
   width,
+  locationIndex,
+  locationTotal,
+  onPrevLocationImage,
+  onNextLocationImage,
 }: SidePanelProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
@@ -49,10 +57,39 @@ export default function SidePanel({
   const levelCounts = levelCountsFromDetections(detections);
   const showDepth = hasFloodDepth && point.flood_depth_detections !== undefined;
   const src = imageUrl(point.file_name);
+  const currentAtLocation = locationIndex >= 0 ? locationIndex + 1 : 0;
+  const atLocationLabel =
+    locationTotal > 0
+      ? `Image ${currentAtLocation} of ${locationTotal} at this location`
+      : "Image at this location";
+  const canNavigatePrev = locationTotal > 1 && locationIndex > 0;
+  const canNavigateNext =
+    locationTotal > 1 && locationIndex >= 0 && locationIndex < locationTotal - 1;
 
   return (
     <>
       <aside className="side-panel" style={{ width }}>
+        <div className="side-panel__location-nav">
+          <button
+            type="button"
+            className="side-panel__location-nav-button"
+            onClick={onPrevLocationImage}
+            disabled={!canNavigatePrev}
+            aria-label="Show previous image at this location"
+          >
+            ←
+          </button>
+          <p className="side-panel__location-index">{atLocationLabel}</p>
+          <button
+            type="button"
+            className="side-panel__location-nav-button"
+            onClick={onNextLocationImage}
+            disabled={!canNavigateNext}
+            aria-label="Show next image at this location"
+          >
+            →
+          </button>
+        </div>
         <button
           type="button"
           className="side-panel__image-wrap"

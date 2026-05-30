@@ -37,6 +37,14 @@ def load_posts_by_filename(zip_path: str | zipfile.ZipFile) -> dict[str, dict[st
     return by_name
 
 
+def media_url(post: dict[str, Any] | None) -> str:
+    """Return media.url from a GIA post object, or empty string when missing."""
+    if not post:
+        return ""
+    media = post.get("media") or {}
+    return str(media.get("url") or "")
+
+
 def post_text_fields(post: dict[str, Any] | None) -> dict[str, str]:
     """Return platform, post_id, caption, tags for index.parquet."""
     if not post:
