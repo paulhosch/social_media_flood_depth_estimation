@@ -1,6 +1,8 @@
 {
   "zip_jpg_total": 14928,
-  "included_gps_datetime": 663,
+  "included_gps_datetime_before_dedup": 1218,
+  "included_after_dedup": 663,
+  "dedup_removed": 555,
   "flooded": 492,
   "non_flooded": 171,
   "flooded_with_vehicles": 49,

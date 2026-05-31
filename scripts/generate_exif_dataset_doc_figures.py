@@ -90,12 +90,26 @@ def _load_frame() -> tuple[pd.DataFrame, dict]:
     return pd.DataFrame(rows), manifest
 
 
+def _exif_gps_datetime_before_dedup(manifest: dict) -> int:
+    dedup = manifest.get("dedup") or {}
+    input_count = dedup.get("input_count")
+    if isinstance(input_count, int):
+        return input_count
+    skip_url = int(manifest.get("skipped_duplicate_url") or 0)
+    skip_content = int(manifest.get("skipped_duplicate_content") or 0)
+    return int(manifest["included_count"]) + skip_url + skip_content
+
+
 def _dataset_stats(df: pd.DataFrame, manifest: dict) -> dict:
     flooded = df["flood_class"] == FLOOD_CLASS_FLOODED
     has_vehicle = df["flood_depth_vehicle_count"] > 0
+    before_dedup = _exif_gps_datetime_before_dedup(manifest)
+    after_dedup = int(manifest["included_count"])
     return {
         "zip_jpg_total": manifest["zip_jpg_total"],
-        "included_gps_datetime": manifest["included_count"],
+        "included_gps_datetime_before_dedup": before_dedup,
+        "included_after_dedup": after_dedup,
+        "dedup_removed": before_dedup - after_dedup,
         "flooded": int(flooded.sum()),
         "non_flooded": int((~flooded).sum()),
         "flooded_with_vehicles": int((flooded & has_vehicle).sum()),
@@ -281,18 +295,20 @@ def figure_counts(stats: dict, out_path: Path) -> None:
     labels = [
         "All images\nin source zip",
         "EXIF GPS +\ndatetime",
+        "Deduped\n(unique per post)",
         "Flooded\n(classifier)",
         "Flooded +\nvehicle detected",
     ]
     values = [
         stats["zip_jpg_total"],
-        stats["included_gps_datetime"],
+        stats["included_gps_datetime_before_dedup"],
+        stats["included_after_dedup"],
         stats["flooded"],
         stats["flooded_with_vehicles"],
     ]
-    colors = ["#bdbdbd", "#969696", COLOR_FLOODED, "#08519c"]
+    colors = ["#bdbdbd", "#969696", "#525252", COLOR_FLOODED, "#08519c"]
 
-    fig, ax = plt.subplots(figsize=(8, 5))
+    fig, ax = plt.subplots(figsize=(10, 5))
     x = np.arange(len(labels))
     bars = ax.bar(x, values, color=colors, edgecolor="#333333", linewidth=0.6)
     ax.set_xticks(x)

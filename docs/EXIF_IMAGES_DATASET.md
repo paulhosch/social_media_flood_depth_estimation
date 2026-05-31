@@ -15,7 +15,8 @@ Counts below reflect the dataset after dedup on **2026-05-30** (see `data/exif_i
 | Metric | Count |
 |--------|------:|
 | Images in source zip | 14,928 |
-| Included (EXIF GPS + datetime, after dedup) | 663 |
+| EXIF GPS + datetime (before dedup) | 1,218 |
+| Included after within-post dedup | 663 |
 | Skipped as within-post duplicate (URL or content) | 555 |
 | Classified as flooded | 492 |
 | Classified as non-flooded | 171 |
@@ -265,9 +266,9 @@ Example skip counts from the reference build (with dedup):
 
 The following embedded figures summarize dataset composition, spatial coverage, and temporal distribution.
 
-![Figure 6 — Dataset funnel: counts from source zip through geotagged subset to flooded images with vehicles](exif_images/figures/fig04_dataset_funnel.png)
+![Figure 6 — Dataset funnel: counts from source zip through dedup and geotagged subset to flooded images with vehicles](exif_images/figures/fig04_dataset_funnel.png)
 
-**Figure 6.** Bar chart comparing (1) all JPEGs in the source zip, (2) images with parseable EXIF GPS and at least one datetime, (3) images classified as flooded by Flood-Image-Detection, and (4) flooded images with at least one vehicle detected by FLOOD-DEPTH-ML.
+**Figure 6.** Bar chart comparing (1) all JPEGs in the source zip, (2) images with parseable EXIF GPS and at least one datetime, (3) the same subset after within-post URL/content dedup, (4) images classified as flooded by Flood-Image-Detection, and (5) flooded images with at least one vehicle detected by FLOOD-DEPTH-ML.
 
 ![Figure 7 — Spatial distribution of geotagged images](exif_images/figures/fig05_spatial_distribution.png)
 
