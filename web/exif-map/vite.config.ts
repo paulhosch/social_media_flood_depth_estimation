@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 
+import { cloudflare } from "@cloudflare/vite-plugin";
+
 const repoRoot = path.resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const imagesDir = path.join(repoRoot, "data", "exif_images", "images");
 
@@ -46,7 +48,7 @@ function serveDatasetImages(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), serveDatasetImages()],
+  plugins: [react(), serveDatasetImages(), cloudflare()],
   server: {
     host: true,
     port: 5173,
