@@ -32,6 +32,23 @@ Verify downloads with the SHA256 checksum published on the GitHub Release page.
 
 Supported platforms: Windows, macOS (Intel and Apple Silicon), Linux x86_64.
 
+### Build the viewer bundle (maintainers)
+
+From a machine with the built dataset under `data/exif_images/images/`:
+
+```bash
+chmod +x scripts/build_viewer_bundle.sh
+./scripts/build_viewer_bundle.sh --version v1.0.0
+```
+
+Produces `release/exif-map-viewer-v1.0.0.zip` with static site, all JPEGs, miniserve binaries, and OS launchers. The script prints a SHA256 checksum for the GitHub Release notes.
+
+Upload to GitHub Release:
+
+```bash
+gh release upload v1.0.0 release/exif-map-viewer-v1.0.0.zip --clobber
+```
+
 ## Build EXIF images dataset
 
 From `data/raw/social_media_2023-2024.zip` (GPS + EXIF datetime filter, within-post URL/content dedup, 2048 px re-encode):

@@ -29,3 +29,6 @@ data/exif_images/*
 # ML model weights (fetch with scripts/fetch_flood_depth_model.py)
 data/models/*
 !data/models/.gitkeep
+
+# Viewer bundle build output (scripts/build_viewer_bundle.sh)
+release/
